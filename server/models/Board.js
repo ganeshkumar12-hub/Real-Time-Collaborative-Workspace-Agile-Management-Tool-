@@ -2,13 +2,20 @@ const mongoose = require("mongoose");
 
 const boardSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
+    name: {
+      type: String,
+      required: true,
+    },
+
     workspace: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Workspace"
-    }
+      ref: "Workspace",
+      required: true,
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
 module.exports = mongoose.model("Board", boardSchema);
