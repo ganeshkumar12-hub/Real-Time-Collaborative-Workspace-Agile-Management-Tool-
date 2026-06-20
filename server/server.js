@@ -1,9 +1,11 @@
+
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const { protect } = require("./middleware/authMiddleware");
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
+const workspaceRoutes = require("./routes/workspaceRoutes");
 
 dotenv.config();
 
@@ -15,6 +17,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
+app.use("/api/workspaces", workspaceRoutes);
 
 app.get("/", (req, res) => {
   res.send("Workspace API Running");
