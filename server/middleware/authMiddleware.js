@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 
-const protect = async (req, res, next) => {
+const protect = (req, res, next) => {
   let token;
 
   if (
@@ -17,7 +17,7 @@ const protect = async (req, res, next) => {
 
       req.user = decoded;
 
-      next();
+      return next();
     } catch (error) {
       return res.status(401).json({
         message: "Not authorized",
@@ -25,11 +25,11 @@ const protect = async (req, res, next) => {
     }
   }
 
-  if (!token) {
-    return res.status(401).json({
-      message: "No token provided",
-    });
-  }
+  return res.status(401).json({
+    message: "No token provided",
+  });
 };
 
-module.exports = { protect };
+module.exports = {
+  protect,
+};

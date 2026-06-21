@@ -20,9 +20,9 @@ const createWorkspace = async (req, res) => {
 
 const getMyWorkspaces = async (req, res) => {
   try {
-    const workspaces = await Workspace.find({
-      members: req.user.id,
-    });
+    const workspaces = await Workspace.find()
+      .populate("owner", "name email")
+      .populate("members", "name email");
 
     res.json(workspaces);
   } catch (error) {
@@ -34,7 +34,9 @@ const getMyWorkspaces = async (req, res) => {
 
 const getWorkspaceById = async (req, res) => {
   try {
-    const workspace = await Workspace.findById(req.params.id);
+    const workspace = await Workspace.findById(req.params.id)
+      .populate("owner", "name email")
+      .populate("members", "name email");
 
     if (!workspace) {
       return res.status(404).json({
@@ -68,7 +70,11 @@ const inviteMember = async (req, res) => {
       });
     }
 
-    if (!workspace.members.includes(userId)) {
+    const memberExists = workspace.members.some(
+      (member) => member.toString() === userId
+    );
+
+    if (!memberExists) {
       workspace.members.push(userId);
       await workspace.save();
     }

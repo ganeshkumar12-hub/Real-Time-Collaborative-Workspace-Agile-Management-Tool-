@@ -21,6 +21,7 @@ function Login() {
 
       navigate("/dashboard");
     } catch (error) {
+      console.log(error);
       alert("Login Failed");
     }
   };
@@ -34,9 +35,7 @@ function Login() {
           type="email"
           placeholder="Email"
           value={email}
-          onChange={(e) =>
-            setEmail(e.target.value)
-          }
+          onChange={(e) => setEmail(e.target.value)}
         />
 
         <br />
@@ -46,9 +45,7 @@ function Login() {
           type="password"
           placeholder="Password"
           value={password}
-          onChange={(e) =>
-            setPassword(e.target.value)
-          }
+          onChange={(e) => setPassword(e.target.value)}
         />
 
         <br />
