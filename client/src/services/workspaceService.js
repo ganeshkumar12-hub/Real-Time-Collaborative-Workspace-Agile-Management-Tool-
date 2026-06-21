@@ -13,3 +13,19 @@ export const getWorkspaces = async () => {
 
   return response.data;
 };
+
+export const createWorkspace = async (name) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.post(
+    API_URL,
+    { name },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return response.data;
+};

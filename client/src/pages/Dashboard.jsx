@@ -1,50 +1,45 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { createWorkspace, getWorkspaces } from "../services/workspaceService";
 import useAuthStore from "../store/authStore";
-import { getWorkspaces } from "../services/workspaceService";
 
 function Dashboard() {
   const navigate = useNavigate();
 
-  const logout = useAuthStore(
-    (state) => state.logout
-  );
+  const logout = useAuthStore((state) => state.logout);
 
-  const [workspaces, setWorkspaces] =
-    useState([]);
+  const [workspaces, setWorkspaces] = useState([]);
+
+  const [workspaceName, setWorkspaceName] = useState("");
 
   useEffect(() => {
     const loadWorkspaces = async () => {
       try {
-        console.log(
-          "TOKEN:",
-          localStorage.getItem("token")
-        );
-
-        const data =
-          await getWorkspaces();
-
-        console.log(
-          "WORKSPACES:",
-          data
-        );
+        const data = await getWorkspaces();
 
         setWorkspaces(data);
       } catch (error) {
-        console.log(
-          "WORKSPACE ERROR:",
-          error
-        );
-
-        console.log(
-          error.response?.data
-        );
+        console.log(error);
       }
     };
 
     loadWorkspaces();
   }, []);
+
+  const handleCreateWorkspace = async () => {
+    if (!workspaceName) return;
+
+    try {
+      const newWorkspace = await createWorkspace(workspaceName);
+
+      setWorkspaces([...workspaces, newWorkspace]);
+
+      setWorkspaceName("");
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -63,74 +58,58 @@ function Dashboard() {
       <div
         style={{
           display: "flex",
-          justifyContent:
-            "space-between",
+          justifyContent: "space-between",
           alignItems: "center",
         }}
       >
-        <h1>
-          Workspace Dashboard
-        </h1>
+        <h1>Workspace Dashboard</h1>
 
-        <button onClick={handleLogout}>
-          Logout
-        </button>
+        <button onClick={handleLogout}>Logout</button>
       </div>
 
       <hr />
 
-      <button
+      <div
         style={{
-          padding: "10px 20px",
           marginTop: "20px",
           marginBottom: "20px",
         }}
       >
-        + Create Workspace
-      </button>
+        <input
+          type="text"
+          placeholder="Workspace Name"
+          value={workspaceName}
+          onChange={(e) => setWorkspaceName(e.target.value)}
+        />
 
-      <h3>
-        Total Workspaces:
-        {" "}
-        {workspaces.length}
-      </h3>
+        <button onClick={handleCreateWorkspace}>Create Workspace</button>
+      </div>
+
+      <h3>Total Workspaces: {workspaces.length}</h3>
 
       <div
         style={{
           display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fit,minmax(250px,1fr))",
+          gridTemplateColumns: "repeat(auto-fit,minmax(250px,1fr))",
           gap: "20px",
         }}
       >
-        {workspaces.map(
-          (workspace) => (
-            <div
-              key={workspace._id}
-              style={{
-                background:
-                  "#1e293b",
-                padding: "20px",
-                borderRadius:
-                  "12px",
-              }}
-            >
-              <h2>
-                {workspace.name}
-              </h2>
+        {workspaces.map((workspace) => (
+          <div
+            key={workspace._id}
+            onClick={() => navigate(`/workspace/${workspace._id}`)}
+            style={{
+              background: "#1e293b",
+              padding: "20px",
+              borderRadius: "12px",
+              cursor: "pointer",
+            }}
+          >
+            <h2>{workspace.name}</h2>
 
-              <p>
-                Members:
-                {" "}
-                {
-                  workspace
-                    .members
-                    .length
-                }
-              </p>
-            </div>
-          )
-        )}
+            <p>Members: {workspace.members?.length}</p>
+          </div>
+        ))}
       </div>
     </div>
   );
