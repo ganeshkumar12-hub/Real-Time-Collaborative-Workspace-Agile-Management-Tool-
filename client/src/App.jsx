@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Workspace from "./pages/Workspace";
+import Board from "./pages/Board";
 
 function App() {
   return (
@@ -31,6 +32,11 @@ function App() {
         <Route
           path="/workspace/:id"
           element={<Workspace />}
+        />
+
+        <Route
+          path="/board/:id"
+          element={<Board />}
         />
       </Routes>
     </BrowserRouter>

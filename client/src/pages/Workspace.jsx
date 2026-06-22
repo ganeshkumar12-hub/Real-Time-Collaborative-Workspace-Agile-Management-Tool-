@@ -1,22 +1,15 @@
-import {
-  useEffect,
-  useState,
-} from "react";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
+import { getWorkspaceById } from "../services/workspaceDetailsService";
 import {
-  useParams,
-} from "react-router-dom";
-
-import {
-  getWorkspaceById,
-} from "../services/workspaceDetailsService";
-
-import {
-  getBoardsByWorkspace,
   createBoard,
+  getBoardsByWorkspace,
 } from "../services/boardService";
 
 function Workspace() {
+  const navigate = useNavigate();
+
   const { id } = useParams();
 
   const [workspace, setWorkspace] =
@@ -112,14 +105,12 @@ function Workspace() {
       </h2>
 
       <p>
-        Owner:
-        {" "}
+        Owner:{" "}
         {workspace.owner?.email}
       </p>
 
       <p>
-        Total Members:
-        {" "}
+        Total Members:{" "}
         {workspace.members?.length}
       </p>
 
@@ -157,6 +148,11 @@ function Workspace() {
           (board) => (
             <div
               key={board._id}
+              onClick={() =>
+                navigate(
+                  `/board/${board._id}`
+                )
+              }
               style={{
                 background:
                   "#1e293b",
@@ -168,6 +164,8 @@ function Workspace() {
                   "10px",
                 borderRadius:
                   "10px",
+                cursor:
+                  "pointer",
               }}
             >
               {board.name}
