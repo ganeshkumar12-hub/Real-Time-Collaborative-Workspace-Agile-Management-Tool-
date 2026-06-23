@@ -10,6 +10,7 @@ const workspaceRoutes = require("./routes/workspaceRoutes");
 const boardRoutes = require("./routes/boardRoutes");
 const listRoutes = require("./routes/listRoutes");
 const cardRoutes = require("./routes/cardRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use("/api/workspaces", workspaceRoutes);
 app.use("/api/boards", boardRoutes);
 app.use("/api/lists", listRoutes);
 app.use("/api/cards", cardRoutes);
+app.use("/api/users", userRoutes);
 
 app.get("/", (req, res) => {
   res.send("Workspace API Running");

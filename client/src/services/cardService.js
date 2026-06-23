@@ -147,3 +147,27 @@ export const moveCard =
 
     return response.data;
   };
+
+export const assignUser = async (
+  cardId,
+  userId
+) => {
+  const token =
+    localStorage.getItem("token");
+
+  const response =
+    await axios.put(
+      `${API_URL}/${cardId}`,
+      {
+        assignedTo: userId,
+      },
+      {
+        headers: {
+          Authorization:
+            `Bearer ${token}`,
+        },
+      }
+    );
+
+  return response.data;
+};
