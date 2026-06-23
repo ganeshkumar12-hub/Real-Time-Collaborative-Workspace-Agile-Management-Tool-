@@ -49,3 +49,44 @@ export const createCard =
 
     return response.data;
   };
+export const deleteCard =
+  async (cardId) => {
+    const token =
+      localStorage.getItem("token");
+
+    const response =
+      await axios.delete(
+        `${API_URL}/${cardId}`,
+        {
+          headers: {
+            Authorization:
+              `Bearer ${token}`,
+          },
+        }
+      );
+
+    return response.data;
+  };
+
+export const updateCard =
+  async (
+    cardId,
+    title
+  ) => {
+    const token =
+      localStorage.getItem("token");
+
+    const response =
+      await axios.put(
+        `${API_URL}/${cardId}`,
+        { title },
+        {
+          headers: {
+            Authorization:
+              `Bearer ${token}`,
+          },
+        }
+      );
+
+    return response.data;
+  };
