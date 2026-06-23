@@ -122,3 +122,28 @@ export const updateDueDate =
 
     return response.data;
   };
+
+export const moveCard =
+  async (
+    cardId,
+    targetListId
+  ) => {
+    const token =
+      localStorage.getItem("token");
+
+    const response =
+      await axios.put(
+        `${API_URL}/${cardId}`,
+        {
+          list: targetListId,
+        },
+        {
+          headers: {
+            Authorization:
+              `Bearer ${token}`,
+          },
+        }
+      );
+
+    return response.data;
+  };

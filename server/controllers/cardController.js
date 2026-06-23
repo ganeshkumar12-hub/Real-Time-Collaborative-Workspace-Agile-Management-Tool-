@@ -83,6 +83,11 @@ const updateCard = async (req, res) => {
         req.body.dueDate;
     }
 
+    if (req.body.list !== undefined) {
+      card.list =
+        req.body.list;
+    }
+
     if (
       req.body.assignedTo !==
       undefined
