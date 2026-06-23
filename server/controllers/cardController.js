@@ -74,30 +74,22 @@ const updateCard = async (req, res) => {
     }
 
     if (req.body.description !== undefined) {
-      card.description =
-        req.body.description;
+      card.description = req.body.description;
     }
 
     if (req.body.dueDate !== undefined) {
-      card.dueDate =
-        req.body.dueDate;
+      card.dueDate = req.body.dueDate;
+    }
+
+    if (req.body.assignedTo !== undefined) {
+      card.assignedTo = req.body.assignedTo;
     }
 
     if (req.body.list !== undefined) {
-      card.list =
-        req.body.list;
+      card.list = req.body.list;
     }
 
-    if (
-      req.body.assignedTo !==
-      undefined
-    ) {
-      card.assignedTo =
-        req.body.assignedTo;
-    }
-
-    const updatedCard =
-      await card.save();
+    const updatedCard = await card.save();
 
     res.json(updatedCard);
   } catch (error) {
