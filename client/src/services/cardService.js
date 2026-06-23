@@ -49,6 +49,7 @@ export const createCard =
 
     return response.data;
   };
+
 export const deleteCard =
   async (cardId) => {
     const token =
@@ -71,7 +72,9 @@ export const deleteCard =
 export const updateCard =
   async (
     cardId,
-    title
+    title,
+    description,
+    dueDate
   ) => {
     const token =
       localStorage.getItem("token");
@@ -79,7 +82,36 @@ export const updateCard =
     const response =
       await axios.put(
         `${API_URL}/${cardId}`,
-        { title },
+        {
+          title,
+          description,
+          dueDate,
+        },
+        {
+          headers: {
+            Authorization:
+              `Bearer ${token}`,
+          },
+        }
+      );
+
+    return response.data;
+  };
+
+export const updateDueDate =
+  async (
+    cardId,
+    dueDate
+  ) => {
+    const token =
+      localStorage.getItem("token");
+
+    const response =
+      await axios.put(
+        `${API_URL}/${cardId}`,
+        {
+          dueDate,
+        },
         {
           headers: {
             Authorization:

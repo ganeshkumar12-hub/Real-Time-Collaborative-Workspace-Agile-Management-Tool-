@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:5000/api/boards";
+const API_URL =
+  "http://localhost:5000/api/boards";
 
 export const getBoardsByWorkspace =
   async (workspaceId) => {
@@ -36,6 +37,25 @@ export const createBoard =
           name,
           workspaceId,
         },
+        {
+          headers: {
+            Authorization:
+              `Bearer ${token}`,
+          },
+        }
+      );
+
+    return response.data;
+  };
+
+export const deleteBoard =
+  async (boardId) => {
+    const token =
+      localStorage.getItem("token");
+
+    const response =
+      await axios.delete(
+        `${API_URL}/${boardId}`,
         {
           headers: {
             Authorization:

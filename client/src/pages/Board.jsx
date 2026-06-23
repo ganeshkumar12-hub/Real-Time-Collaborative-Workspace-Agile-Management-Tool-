@@ -1,13 +1,18 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import { createList, getListsByBoard } from "../services/listService";
+import {
+  createList,
+  getListsByBoard,
+  deleteList,
+} from "../services/listService";
 
 import {
   createCard,
   deleteCard,
   getCardsByList,
   updateCard,
+  updateDueDate,
 } from "../services/cardService";
 
 function Board() {
@@ -27,9 +32,11 @@ function Board() {
         const cardsData = {};
 
         for (const list of data) {
-          const listCards = await getCardsByList(list._id);
+          const listCards =
+            await getCardsByList(list._id);
 
-          cardsData[list._id] = listCards;
+          cardsData[list._id] =
+            listCards;
         }
 
         setCards(cardsData);
@@ -45,7 +52,8 @@ function Board() {
     if (!listTitle) return;
 
     try {
-      const list = await createList(listTitle, id);
+      const list =
+        await createList(listTitle, id);
 
       setLists([...lists, list]);
 
@@ -55,56 +63,170 @@ function Board() {
     }
   };
 
-  const handleCreateCard = async (listId) => {
-    const title = prompt("Task Title");
+  const handleDeleteList =
+    async (listId) => {
+      if (
+        !window.confirm(
+          "Delete this list?"
+        )
+      )
+        return;
 
-    if (!title) return;
+      try {
+        await deleteList(listId);
 
-    const description = prompt("Task Description") || "";
+        setLists(
+          lists.filter(
+            (list) =>
+              list._id !== listId
+          )
+        );
 
-    try {
-      const card = await createCard(title, description, listId);
+        const updatedCards = {
+          ...cards,
+        };
 
-      setCards({
-        ...cards,
-        [listId]: [...(cards[listId] || []), card],
-      });
-    } catch (error) {
-      console.log(error);
-    }
-  };
+        delete updatedCards[listId];
 
-  const handleDeleteCard = async (listId, cardId) => {
-    try {
-      await deleteCard(cardId);
+        setCards(updatedCards);
+      } catch (error) {
+        console.log(error);
+      }
+    };
 
-      setCards({
-        ...cards,
-        [listId]: cards[listId].filter((card) => card._id !== cardId),
-      });
-    } catch (error) {
-      console.log(error);
-    }
-  };
+  const handleCreateCard =
+    async (listId) => {
+      const title =
+        prompt("Task Title");
 
-  const handleEditCard = async (listId, cardId, currentTitle) => {
-    const newTitle = prompt("Enter new task title", currentTitle);
+      if (!title) return;
 
-    if (!newTitle || newTitle === currentTitle) return;
+      const description =
+        prompt(
+          "Task Description"
+        ) || "";
 
-    try {
-      const updatedCard = await updateCard(cardId, newTitle);
+      try {
+        const card =
+          await createCard(
+            title,
+            description,
+            listId
+          );
 
-      setCards({
-        ...cards,
-        [listId]: cards[listId].map((card) =>
-          card._id === cardId ? updatedCard : card,
-        ),
-      });
-    } catch (error) {
-      console.log(error);
-    }
-  };
+        setCards({
+          ...cards,
+          [listId]: [
+            ...(cards[listId] ||
+              []),
+            card,
+          ],
+        });
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+  const handleDeleteCard =
+    async (
+      listId,
+      cardId
+    ) => {
+      try {
+        await deleteCard(cardId);
+
+        setCards({
+          ...cards,
+          [listId]:
+            cards[listId].filter(
+              (card) =>
+                card._id !== cardId
+            ),
+        });
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+  const handleEditCard =
+    async (
+      listId,
+      cardId,
+      currentTitle,
+      currentDescription,
+      currentDueDate
+    ) => {
+      const newTitle =
+        prompt(
+          "Task Title",
+          currentTitle
+        );
+
+      if (!newTitle) return;
+
+      const newDescription =
+        prompt(
+          "Task Description",
+          currentDescription || ""
+        );
+
+      try {
+        const updatedCard =
+          await updateCard(
+            cardId,
+            newTitle,
+            newDescription,
+            currentDueDate
+          );
+
+        setCards({
+          ...cards,
+          [listId]:
+            cards[listId].map(
+              (card) =>
+                card._id === cardId
+                  ? updatedCard
+                  : card
+            ),
+        });
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+  const handleSetDueDate =
+    async (
+      listId,
+      cardId
+    ) => {
+      const dueDate =
+        prompt(
+          "Enter Due Date (YYYY-MM-DD)"
+        );
+
+      if (!dueDate) return;
+
+      try {
+        const updatedCard =
+          await updateDueDate(
+            cardId,
+            dueDate
+          );
+
+        setCards({
+          ...cards,
+          [listId]:
+            cards[listId].map(
+              (card) =>
+                card._id === cardId
+                  ? updatedCard
+                  : card
+            ),
+        });
+      } catch (error) {
+        console.log(error);
+      }
+    };
 
   return (
     <div
@@ -119,99 +241,160 @@ function Board() {
 
       <hr />
 
-      <div
-        style={{
-          marginBottom: "20px",
-        }}
-      >
-        <input
-          type="text"
-          placeholder="List Title"
-          value={listTitle}
-          onChange={(e) => setListTitle(e.target.value)}
-          style={{
-            padding: "10px",
-            marginRight: "10px",
-          }}
-        />
+      <input
+        type="text"
+        placeholder="List Title"
+        value={listTitle}
+        onChange={(e) =>
+          setListTitle(
+            e.target.value
+          )
+        }
+      />
 
-        <button onClick={handleCreateList}>Create List</button>
-      </div>
+      <button
+        onClick={handleCreateList}
+      >
+        Create List
+      </button>
 
       <div
         style={{
           display: "flex",
           gap: "20px",
-          alignItems: "flex-start",
-          overflowX: "auto",
+          marginTop: "20px",
         }}
       >
         {lists.map((list) => (
           <div
             key={list._id}
             style={{
-              background: "#1e293b",
+              background:
+                "#1e293b",
               padding: "20px",
-              borderRadius: "12px",
-              minWidth: "300px",
+              borderRadius:
+                "12px",
+              minWidth:
+                "300px",
             }}
           >
-            <h3>{list.title}</h3>
+            <div
+              style={{
+                display: "flex",
+                justifyContent:
+                  "space-between",
+              }}
+            >
+              <h3>
+                {list.title}
+              </h3>
 
-            <button onClick={() => handleCreateCard(list._id)}>
+              <button
+                onClick={() =>
+                  handleDeleteList(
+                    list._id
+                  )
+                }
+              >
+                X
+              </button>
+            </div>
+
+            <button
+              onClick={() =>
+                handleCreateCard(
+                  list._id
+                )
+              }
+            >
               + Add Task
             </button>
 
             <div
               style={{
-                marginTop: "15px",
+                marginTop:
+                  "15px",
               }}
             >
-              {(cards[list._id] || []).map((card) => (
-                <div
-                  key={card._id}
-                  style={{
-                    background: "#334155",
-                    padding: "12px",
-                    borderRadius: "8px",
-                    marginBottom: "10px",
-                  }}
-                >
-                  <h4>{card.title}</h4>
+              {(cards[
+                list._id
+              ] || []).map(
+                (card) => (
+                  <div
+                    key={
+                      card._id
+                    }
+                    style={{
+                      background:
+                        "#334155",
+                      padding:
+                        "12px",
+                      borderRadius:
+                        "8px",
+                      marginBottom:
+                        "10px",
+                    }}
+                  >
+                    <h4>
+                      {
+                        card.title
+                      }
+                    </h4>
 
-                  {card.description && (
-                    <p
-                      style={{
-                        fontSize: "14px",
-                        opacity: 0.8,
-                      }}
-                    >
-                      {card.description}
+                    <p>
+                      {
+                        card.description
+                      }
                     </p>
-                  )}
 
-                  <div>
+                    {card.dueDate && (
+                      <p>
+                        📅 Due:
+                        {" "}
+                        {new Date(
+                          card.dueDate
+                        ).toLocaleDateString()}
+                      </p>
+                    )}
+
                     <button
                       onClick={() =>
-                        handleEditCard(list._id, card._id, card.title)
+                        handleEditCard(
+                          list._id,
+                          card._id,
+                          card.title,
+                          card.description,
+                          card.dueDate
+                        )
                       }
                     >
                       Edit
                     </button>
 
                     <button
-                      onClick={() => handleDeleteCard(list._id, card._id)}
-                      style={{
-                        marginLeft: "10px",
-                        background: "crimson",
-                        color: "white",
-                      }}
+                      onClick={() =>
+                        handleSetDueDate(
+                          list._id,
+                          card._id
+                        )
+                      }
+                    >
+                      Due Date
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        handleDeleteCard(
+                          list._id,
+                          card._id
+                        )
+                      }
                     >
                       Delete
                     </button>
                   </div>
-                </div>
-              ))}
+                )
+              )}
             </div>
           </div>
         ))}

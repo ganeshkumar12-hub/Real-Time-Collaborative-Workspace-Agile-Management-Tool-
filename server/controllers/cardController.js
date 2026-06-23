@@ -69,10 +69,30 @@ const updateCard = async (req, res) => {
       });
     }
 
-    card.title = req.body.title || card.title;
-    card.description = req.body.description || card.description;
+    if (req.body.title !== undefined) {
+      card.title = req.body.title;
+    }
 
-    const updatedCard = await card.save();
+    if (req.body.description !== undefined) {
+      card.description =
+        req.body.description;
+    }
+
+    if (req.body.dueDate !== undefined) {
+      card.dueDate =
+        req.body.dueDate;
+    }
+
+    if (
+      req.body.assignedTo !==
+      undefined
+    ) {
+      card.assignedTo =
+        req.body.assignedTo;
+    }
+
+    const updatedCard =
+      await card.save();
 
     res.json(updatedCard);
   } catch (error) {

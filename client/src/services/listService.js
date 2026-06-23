@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:5000/api/lists";
+const API_URL =
+  "http://localhost:5000/api/lists";
 
 export const getListsByBoard =
   async (boardId) => {
@@ -36,6 +37,25 @@ export const createList =
           title,
           boardId,
         },
+        {
+          headers: {
+            Authorization:
+              `Bearer ${token}`,
+          },
+        }
+      );
+
+    return response.data;
+  };
+
+export const deleteList =
+  async (listId) => {
+    const token =
+      localStorage.getItem("token");
+
+    const response =
+      await axios.delete(
+        `${API_URL}/${listId}`,
         {
           headers: {
             Authorization:

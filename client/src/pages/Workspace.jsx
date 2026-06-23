@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { getWorkspaceById } from "../services/workspaceDetailsService";
+
 import {
   createBoard,
   getBoardsByWorkspace,
+  deleteBoard,
 } from "../services/boardService";
 
 function Workspace() {
@@ -26,9 +28,7 @@ function Workspace() {
       async () => {
         try {
           const data =
-            await getWorkspaceById(
-              id
-            );
+            await getWorkspaceById(id);
 
           setWorkspace(data);
         } catch (error) {
@@ -71,6 +71,30 @@ function Workspace() {
         ]);
 
         setBoardName("");
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+  const handleDeleteBoard =
+    async (boardId) => {
+      const confirmDelete =
+        window.confirm(
+          "Delete this board?"
+        );
+
+      if (!confirmDelete)
+        return;
+
+      try {
+        await deleteBoard(boardId);
+
+        setBoards(
+          boards.filter(
+            (board) =>
+              board._id !== boardId
+          )
+        );
       } catch (error) {
         console.log(error);
       }
@@ -148,11 +172,6 @@ function Workspace() {
           (board) => (
             <div
               key={board._id}
-              onClick={() =>
-                navigate(
-                  `/board/${board._id}`
-                )
-              }
               style={{
                 background:
                   "#1e293b",
@@ -164,11 +183,51 @@ function Workspace() {
                   "10px",
                 borderRadius:
                   "10px",
-                cursor:
-                  "pointer",
+                display: "flex",
+                justifyContent:
+                  "space-between",
+                alignItems:
+                  "center",
               }}
             >
-              {board.name}
+              <span
+                onClick={() =>
+                  navigate(
+                    `/board/${board._id}`
+                  )
+                }
+                style={{
+                  cursor:
+                    "pointer",
+                  flex: 1,
+                }}
+              >
+                {board.name}
+              </span>
+
+              <button
+                onClick={() =>
+                  handleDeleteBoard(
+                    board._id
+                  )
+                }
+                style={{
+                  background:
+                    "crimson",
+                  color:
+                    "white",
+                  border:
+                    "none",
+                  padding:
+                    "6px 10px",
+                  borderRadius:
+                    "5px",
+                  cursor:
+                    "pointer",
+                }}
+              >
+                Delete
+              </button>
             </div>
           )
         )}
