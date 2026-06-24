@@ -1,5 +1,5 @@
 
-
+const Activity = require("../models/Activity");
 const Card = require("../models/Card");
 const List = require("../models/List");
 const {
@@ -23,6 +23,11 @@ const createCard = async (req, res) => {
       description,
       list: listId,
     });
+    await Activity.create({
+  action: `Created card "${card.title}"`,
+  user: req.user?._id,
+  card: card._id,
+});
 
     getIO().emit(
       "cardCreated",
@@ -89,18 +94,34 @@ const updateCard = async (req, res) => {
     if (req.body.description !== undefined) {
       card.description = req.body.description;
     }
-
     if (req.body.dueDate !== undefined) {
-      card.dueDate = req.body.dueDate;
-    }
+  card.dueDate = req.body.dueDate;
 
+  await Activity.create({
+    action: `Updated due date for "${card.title}"`,
+    user: req.user?._id,
+    card: card._id,
+  });
+}
     if (req.body.assignedTo !== undefined) {
-      card.assignedTo = req.body.assignedTo;
-    }
+  card.assignedTo = req.body.assignedTo;
+
+  await Activity.create({
+    action: `Assigned card "${card.title}"`,
+    user: req.user?._id,
+    card: card._id,
+  });
+}
 
     if (req.body.list !== undefined) {
-      card.list = req.body.list;
-    }
+  card.list = req.body.list;
+
+  await Activity.create({
+    action: `Moved card "${card.title}"`,
+    user: req.user?._id,
+    card: card._id,
+  });
+}
 
     const updatedCard = await card.save();
 
@@ -133,6 +154,11 @@ const deleteCard = async (req, res) => {
   "cardDeleted",
   card._id
 );
+await Activity.create({
+  action: `Deleted card "${card.title}"`,
+  user: req.user?._id,
+  card: card._id,
+});
     await card.deleteOne();
 
     res.json({

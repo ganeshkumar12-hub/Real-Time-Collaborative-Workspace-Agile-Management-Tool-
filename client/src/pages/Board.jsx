@@ -3,6 +3,9 @@ import { useParams } from "react-router-dom";
 import { getUsers } from "../services/userService";
 import socket from "../services/socket";
 import {
+  getActivities,
+} from "../services/activityService";
+import {
   createList,
   getListsByBoard,
   deleteList,
@@ -25,6 +28,8 @@ function Board() {
   const [cards, setCards] = useState({});
   const [listTitle, setListTitle] = useState("");
   const [error, setError] = useState("");
+  const [activities, setActivities] =
+  useState([]);
   useEffect(() => {
   socket.on("connect", () => {
     console.log(
@@ -73,7 +78,12 @@ function Board() {
         ]);
         setLists(listsData);
         setUsers(usersData);
+const activityData =
+  await getActivities();
 
+setActivities(
+  activityData
+);
         const cardEntries = await Promise.all(
           listsData.map(async (list) => [
             list._id,
@@ -90,49 +100,49 @@ function Board() {
     loadData();
   }, [id]);
   useEffect(() => {
-  socket.on("connect", () => {
-    console.log(
-      "Connected to Socket Server:",
-      socket.id
-    );
-  });
+//   socket.on("connect", () => {
+//     console.log(
+//       "Connected to Socket Server:",
+//       socket.id
+//     );
+//   });
 
-  socket.on("cardCreated", (card) => {
-  setCards((prev) => ({
-    ...prev,
-    [card.list]: [
-      ...(prev[card.list] || []),
-      card,
-    ],
-  }));
-});
+// //   socket.on("cardCreated", (card) => {
+// //   setCards((prev) => ({
+// //     ...prev,
+// //     [card.list]: [
+// //       ...(prev[card.list] || []),
+// //       card,
+// //     ],
+// //   }));
+// // });
 
-  socket.on("cardUpdated", (card) => {
-  setCards((prev) => {
-    const updated = {};
+// //   socket.on("cardUpdated", (card) => {
+// //   setCards((prev) => {
+// //     const updated = {};
 
-    Object.keys(prev).forEach((listId) => {
-      updated[listId] = prev[listId].map((c) =>
-        c._id === card._id ? card : c
-      );
-    });
+// //     Object.keys(prev).forEach((listId) => {
+// //       updated[listId] = prev[listId].map((c) =>
+// //         c._id === card._id ? card : c
+// //       );
+// //     });
 
-    return updated;
-  });
-});
-  socket.on("cardDeleted", (cardId) => {
-  setCards((prev) => {
-    const updated = {};
+// //     return updated;
+// //   });
+// // });
+// //   socket.on("cardDeleted", (cardId) => {
+// //   setCards((prev) => {
+// //     const updated = {};
 
-    Object.keys(prev).forEach((listId) => {
-      updated[listId] = prev[listId].filter(
-        (card) => card._id !== cardId
-      );
-    });
+//     Object.keys(prev).forEach((listId) => {
+//       updated[listId] = prev[listId].filter(
+//         (card) => card._id !== cardId
+//       );
+//     });
 
-    return updated;
-  });
-});
+//     return updated;
+//   });
+// });
 
   return () => {
     socket.off("connect");
@@ -462,7 +472,24 @@ function Board() {
           Add List
         </button>
       </div>
+<div
+  style={{
+    background: "#1e293b",
+    padding: "15px",
+    borderRadius: "10px",
+    marginBottom: "20px",
+  }}
+>
+  <h3>Activity Feed</h3>
 
+  {activities
+    .slice(0, 10)
+    .map((activity) => (
+      <p key={activity._id}>
+        {activity.action}
+      </p>
+    ))}
+</div>
       {/* Board */}
       <DragDropContext onDragEnd={handleDragEnd}>
         <div style={{ display: "flex", gap: "20px", overflowX: "auto", paddingBottom: "20px" }}>

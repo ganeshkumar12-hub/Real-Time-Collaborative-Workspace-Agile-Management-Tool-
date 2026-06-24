@@ -8,7 +8,7 @@ const getActivities =
         await Activity.find()
           .populate(
             "user",
-            "name email"
+            "name"
           )
           .sort({
             createdAt: -1,

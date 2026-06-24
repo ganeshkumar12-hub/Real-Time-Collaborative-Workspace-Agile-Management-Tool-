@@ -10,19 +10,11 @@ const activitySchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
     },
 
     card: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Card",
-      default: null,
-    },
-
-    board: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Board",
-      default: null,
     },
   },
   {
