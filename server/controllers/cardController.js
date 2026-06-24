@@ -1,3 +1,5 @@
+
+
 const Card = require("../models/Card");
 const List = require("../models/List");
 
@@ -31,10 +33,7 @@ const getCardsByList = async (req, res) => {
   try {
     const cards = await Card.find({
       list: req.params.listId,
-    }).populate(
-      "assignedTo",
-      "name email"
-    );
+    }).populate("assignedTo", "name email");
 
     res.json(cards);
   } catch (error) {
@@ -46,9 +45,7 @@ const getCardsByList = async (req, res) => {
 
 const getCardById = async (req, res) => {
   try {
-    const card = await Card.findById(
-      req.params.id
-    ).populate(
+    const card = await Card.findById(req.params.id).populate(
       "assignedTo",
       "name email"
     );
@@ -69,9 +66,7 @@ const getCardById = async (req, res) => {
 
 const updateCard = async (req, res) => {
   try {
-    const card = await Card.findById(
-      req.params.id
-    );
+    const card = await Card.findById(req.params.id);
 
     if (!card) {
       return res.status(404).json({
@@ -84,35 +79,26 @@ const updateCard = async (req, res) => {
     }
 
     if (req.body.description !== undefined) {
-      card.description =
-        req.body.description;
+      card.description = req.body.description;
     }
 
     if (req.body.dueDate !== undefined) {
-      card.dueDate =
-        req.body.dueDate;
+      card.dueDate = req.body.dueDate;
     }
 
     if (req.body.assignedTo !== undefined) {
-      card.assignedTo =
-        req.body.assignedTo;
+      card.assignedTo = req.body.assignedTo;
     }
 
     if (req.body.list !== undefined) {
-      card.list =
-        req.body.list;
+      card.list = req.body.list;
     }
 
-    const updatedCard =
-      await card.save();
+    const updatedCard = await card.save();
 
-    const populatedCard =
-      await Card.findById(
-        updatedCard._id
-      ).populate(
-        "assignedTo",
-        "name email"
-      );
+    const populatedCard = await Card.findById(
+      updatedCard._id
+    ).populate("assignedTo", "name email");
 
     res.json(populatedCard);
   } catch (error) {
@@ -124,9 +110,7 @@ const updateCard = async (req, res) => {
 
 const deleteCard = async (req, res) => {
   try {
-    const card = await Card.findById(
-      req.params.id
-    );
+    const card = await Card.findById(req.params.id);
 
     if (!card) {
       return res.status(404).json({
@@ -137,8 +121,7 @@ const deleteCard = async (req, res) => {
     await card.deleteOne();
 
     res.json({
-      message:
-        "Card deleted successfully",
+      message: "Card deleted successfully",
     });
   } catch (error) {
     res.status(500).json({

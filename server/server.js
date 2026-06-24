@@ -27,6 +27,10 @@ app.use("/api/boards", boardRoutes);
 app.use("/api/lists", listRoutes);
 app.use("/api/cards", cardRoutes);
 app.use("/api/users", userRoutes);
+const activityRoutes =
+  require(
+    "./routes/activityRoutes"
+  );
 
 app.get("/", (req, res) => {
   res.send("Workspace API Running");
