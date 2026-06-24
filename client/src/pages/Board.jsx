@@ -3,6 +3,10 @@ import { useParams } from "react-router-dom";
 import { getUsers } from "../services/userService";
 import socket from "../services/socket";
 import {
+  getNotifications,
+} from "../services/notificationService";
+
+import {
   getActivities,
 } from "../services/activityService";
 import {
@@ -28,6 +32,10 @@ function Board() {
   const [cards, setCards] = useState({});
   const [listTitle, setListTitle] = useState("");
   const [error, setError] = useState("");
+  const [
+  notifications,
+  setNotifications,
+] = useState([]);
   const [activities, setActivities] =
   useState([]);
   useEffect(() => {
@@ -78,12 +86,20 @@ function Board() {
         ]);
         setLists(listsData);
         setUsers(usersData);
-const activityData =
-  await getActivities();
 
-setActivities(
-  activityData
-);
+        const notificationData =
+          await getNotifications();
+
+        setNotifications(
+          notificationData
+        );
+
+        const activityData =
+          await getActivities();
+
+        setActivities(
+          activityData
+        );
         const cardEntries = await Promise.all(
           listsData.map(async (list) => [
             list._id,
@@ -472,6 +488,26 @@ setActivities(
           Add List
         </button>
       </div>
+
+      <div
+        style={{
+          background: "#1e293b",
+          padding: "15px",
+          borderRadius: "10px",
+          marginBottom: "20px",
+        }}
+      >
+        <h3>Notifications</h3>
+
+        {notifications
+          .slice(0, 5)
+          .map((notification) => (
+            <p key={notification._id}>
+              🔔 {notification.message}
+            </p>
+          ))}
+      </div>
+
 <div
   style={{
     background: "#1e293b",

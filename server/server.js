@@ -2,7 +2,10 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const http = require("http");
-
+const notificationRoutes =
+  require(
+    "./routes/notificationRoutes"
+  );
 const { protect } = require("./middleware/authMiddleware");
 const connectDB = require("./config/db");
 const {
@@ -28,7 +31,10 @@ initializeSocket(server);
 
 app.use(cors());
 app.use(express.json());
-
+app.use(
+  "/api/notifications",
+  notificationRoutes
+);
 app.use("/api/auth", authRoutes);
 app.use("/api/workspaces", workspaceRoutes);
 app.use("/api/boards", boardRoutes);

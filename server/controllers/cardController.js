@@ -1,6 +1,8 @@
 
 const Activity = require("../models/Activity");
 const Card = require("../models/Card");
+const Notification =
+  require("../models/Notification");
 const List = require("../models/List");
 const {
   getIO,
@@ -103,13 +105,19 @@ const updateCard = async (req, res) => {
     card: card._id,
   });
 }
-    if (req.body.assignedTo !== undefined) {
-  card.assignedTo = req.body.assignedTo;
+   if (req.body.assignedTo !== undefined) {
+  card.assignedTo =
+    req.body.assignedTo;
 
   await Activity.create({
     action: `Assigned card "${card.title}"`,
     user: req.user?._id,
     card: card._id,
+  });
+
+  await Notification.create({
+    message: `You were assigned to "${card.title}"`,
+    user: req.body.assignedTo,
   });
 }
 
