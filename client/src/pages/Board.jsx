@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getUsers } from "../services/userService";
+import socket from "../services/socket";
 import {
   createList,
   getListsByBoard,
@@ -24,6 +25,18 @@ function Board() {
   const [cards, setCards] = useState({});
   const [listTitle, setListTitle] = useState("");
   const [error, setError] = useState("");
+  useEffect(() => {
+  socket.on("connect", () => {
+    console.log(
+      "Connected to Socket Server:",
+      socket.id
+    );
+  });
+
+  return () => {
+    socket.off("connect");
+  };
+}, []);
 
   const handleAssignUser = async (listId, cardId, userId) => {
     try {
@@ -51,6 +64,7 @@ function Board() {
   const [modalDueDate, setModalDueDate] = useState("");
 
   useEffect(() => {
+    
     const loadData = async () => {
       try {
         const [listsData, usersData] = await Promise.all([
@@ -75,6 +89,58 @@ function Board() {
 
     loadData();
   }, [id]);
+  useEffect(() => {
+  socket.on("connect", () => {
+    console.log(
+      "Connected to Socket Server:",
+      socket.id
+    );
+  });
+
+  socket.on("cardCreated", (card) => {
+  setCards((prev) => ({
+    ...prev,
+    [card.list]: [
+      ...(prev[card.list] || []),
+      card,
+    ],
+  }));
+});
+
+  socket.on("cardUpdated", (card) => {
+  setCards((prev) => {
+    const updated = {};
+
+    Object.keys(prev).forEach((listId) => {
+      updated[listId] = prev[listId].map((c) =>
+        c._id === card._id ? card : c
+      );
+    });
+
+    return updated;
+  });
+});
+  socket.on("cardDeleted", (cardId) => {
+  setCards((prev) => {
+    const updated = {};
+
+    Object.keys(prev).forEach((listId) => {
+      updated[listId] = prev[listId].filter(
+        (card) => card._id !== cardId
+      );
+    });
+
+    return updated;
+  });
+});
+
+  return () => {
+    socket.off("connect");
+    socket.off("cardCreated");
+    socket.off("cardUpdated");
+    socket.off("cardDeleted");
+  };
+}, []);
 
   // ── Modal helpers ──────────────────────────────────────────────
   const openModal = (shape) => {

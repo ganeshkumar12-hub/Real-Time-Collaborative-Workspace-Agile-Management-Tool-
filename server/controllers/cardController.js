@@ -2,6 +2,9 @@
 
 const Card = require("../models/Card");
 const List = require("../models/List");
+const {
+  getIO,
+} = require("../socket/socket");
 
 const createCard = async (req, res) => {
   try {
@@ -20,6 +23,11 @@ const createCard = async (req, res) => {
       description,
       list: listId,
     });
+
+    getIO().emit(
+      "cardCreated",
+      card
+    );
 
     res.status(201).json(card);
   } catch (error) {
@@ -99,6 +107,10 @@ const updateCard = async (req, res) => {
     const populatedCard = await Card.findById(
       updatedCard._id
     ).populate("assignedTo", "name email");
+    getIO().emit(
+  "cardUpdated",
+  populatedCard
+);
 
     res.json(populatedCard);
   } catch (error) {
@@ -117,7 +129,10 @@ const deleteCard = async (req, res) => {
         message: "Card not found",
       });
     }
-
+    getIO().emit(
+  "cardDeleted",
+  card._id
+);
     await card.deleteOne();
 
     res.json({
