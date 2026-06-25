@@ -11,6 +11,9 @@ const connectDB = require("./config/db");
 const {
   initializeSocket,
 } = require("./socket/socket");
+const commentRoutes =
+  require("./routes/commentRoutes");
+
 
 const authRoutes = require("./routes/authRoutes");
 const workspaceRoutes = require("./routes/workspaceRoutes");
@@ -41,6 +44,10 @@ app.use("/api/boards", boardRoutes);
 app.use("/api/lists", listRoutes);
 app.use("/api/cards", cardRoutes);
 app.use("/api/users", userRoutes);
+app.use(
+  "/api/comments",
+  commentRoutes
+);
 app.use("/api/activity", activityRoutes);
 
 app.get("/", (req, res) => {

@@ -2,18 +2,10 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getUsers } from "../services/userService";
 import socket from "../services/socket";
-import {
-  getNotifications,
-} from "../services/notificationService";
-
-import {
-  getActivities,
-} from "../services/activityService";
-import {
-  createList,
-  getListsByBoard,
-  deleteList,
-} from "../services/listService";
+import { getComments, createComment } from "../services/commentService";
+import { getNotifications } from "../services/notificationService";
+import { getActivities } from "../services/activityService";
+import { createList, getListsByBoard, deleteList } from "../services/listService";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import {
   createCard,
@@ -32,24 +24,104 @@ function Board() {
   const [cards, setCards] = useState({});
   const [listTitle, setListTitle] = useState("");
   const [error, setError] = useState("");
-  const [
-  notifications,
-  setNotifications,
-] = useState([]);
-  const [activities, setActivities] =
-  useState([]);
-  useEffect(() => {
-  socket.on("connect", () => {
-    console.log(
-      "Connected to Socket Server:",
-      socket.id
-    );
-  });
+  const [comments, setComments] = useState({});
+  const [commentText, setCommentText] = useState({});
+  const [notifications, setNotifications] = useState([]);
+  const [activities, setActivities] = useState([]);
 
-  return () => {
-    socket.off("connect");
+  // ── Socket connection ──────────────────────────────────────────
+  useEffect(() => {
+    socket.on("connect", () => {
+      console.log("Connected to Socket Server:", socket.id);
+    });
+
+    socket.on("cardCreated", (card) => {
+      setCards((prev) => ({
+        ...prev,
+        [card.list]: [...(prev[card.list] || []), card],
+      }));
+    });
+
+    socket.on("cardUpdated", (card) => {
+      setCards((prev) => {
+        const updated = {};
+        Object.keys(prev).forEach((listId) => {
+          updated[listId] = prev[listId].map((c) =>
+            c._id === card._id ? card : c
+          );
+        });
+        return updated;
+      });
+    });
+
+    socket.on("cardDeleted", (cardId) => {
+      setCards((prev) => {
+        const updated = {};
+        Object.keys(prev).forEach((listId) => {
+          updated[listId] = prev[listId].filter((card) => card._id !== cardId);
+        });
+        return updated;
+      });
+    });
+
+    return () => {
+      socket.off("connect");
+      socket.off("cardCreated");
+      socket.off("cardUpdated");
+      socket.off("cardDeleted");
+    };
+  }, []);
+
+  // ── Load board data ────────────────────────────────────────────
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [listsData, usersData] = await Promise.all([
+          getListsByBoard(id),
+          getUsers(),
+        ]);
+        setLists(listsData);
+        setUsers(usersData);
+
+        const notificationData = await getNotifications();
+        setNotifications(notificationData);
+
+        const activityData = await getActivities();
+        setActivities(activityData);
+
+        const cardEntries = await Promise.all(
+          listsData.map(async (list) => [
+            list._id,
+            await getCardsByList(list._id),
+          ])
+        );
+        const cardsMap = Object.fromEntries(cardEntries);
+        setCards(cardsMap);
+
+        // Load comments for every card
+        Object.values(cardsMap).flat().forEach((card) => {
+          loadComments(card._id);
+        });
+      } catch (err) {
+        setError("Failed to load board data.");
+        console.error(err);
+      }
+    };
+
+    loadData();
+  }, [id]);
+
+  const loadComments = async (cardId) => {
+    try {
+      const data = await getComments(cardId);
+      setComments((prev) => ({
+        ...prev,
+        [cardId]: data,
+      }));
+    } catch (error) {
+      console.log(error);
+    }
   };
-}, []);
 
   const handleAssignUser = async (listId, cardId, userId) => {
     try {
@@ -75,98 +147,6 @@ function Board() {
   const [modalTitle, setModalTitle] = useState("");
   const [modalDescription, setModalDescription] = useState("");
   const [modalDueDate, setModalDueDate] = useState("");
-
-  useEffect(() => {
-    
-    const loadData = async () => {
-      try {
-        const [listsData, usersData] = await Promise.all([
-          getListsByBoard(id),
-          getUsers(),
-        ]);
-        setLists(listsData);
-        setUsers(usersData);
-
-        const notificationData =
-          await getNotifications();
-
-        setNotifications(
-          notificationData
-        );
-
-        const activityData =
-          await getActivities();
-
-        setActivities(
-          activityData
-        );
-        const cardEntries = await Promise.all(
-          listsData.map(async (list) => [
-            list._id,
-            await getCardsByList(list._id),
-          ])
-        );
-        setCards(Object.fromEntries(cardEntries));
-      } catch (err) {
-        setError("Failed to load board data.");
-        console.error(err);
-      }
-    };
-
-    loadData();
-  }, [id]);
-  useEffect(() => {
-//   socket.on("connect", () => {
-//     console.log(
-//       "Connected to Socket Server:",
-//       socket.id
-//     );
-//   });
-
-// //   socket.on("cardCreated", (card) => {
-// //   setCards((prev) => ({
-// //     ...prev,
-// //     [card.list]: [
-// //       ...(prev[card.list] || []),
-// //       card,
-// //     ],
-// //   }));
-// // });
-
-// //   socket.on("cardUpdated", (card) => {
-// //   setCards((prev) => {
-// //     const updated = {};
-
-// //     Object.keys(prev).forEach((listId) => {
-// //       updated[listId] = prev[listId].map((c) =>
-// //         c._id === card._id ? card : c
-// //       );
-// //     });
-
-// //     return updated;
-// //   });
-// // });
-// //   socket.on("cardDeleted", (cardId) => {
-// //   setCards((prev) => {
-// //     const updated = {};
-
-//     Object.keys(prev).forEach((listId) => {
-//       updated[listId] = prev[listId].filter(
-//         (card) => card._id !== cardId
-//       );
-//     });
-
-//     return updated;
-//   });
-// });
-
-  return () => {
-    socket.off("connect");
-    socket.off("cardCreated");
-    socket.off("cardUpdated");
-    socket.off("cardDeleted");
-  };
-}, []);
 
   // ── Modal helpers ──────────────────────────────────────────────
   const openModal = (shape) => {
@@ -207,7 +187,6 @@ function Board() {
           setError("Task title is required.");
           return;
         }
-        // FIX: use modalDueDate (the controlled state) instead of modal.dueDate
         const updatedCard = await updateCard(
           modal.cardId,
           modalTitle,
@@ -406,7 +385,6 @@ function Board() {
       width: "100%",
       marginTop: "4px",
     },
-    // Modal
     overlay: {
       position: "fixed",
       inset: 0,
@@ -498,34 +476,25 @@ function Board() {
         }}
       >
         <h3>Notifications</h3>
-
-        {notifications
-          .slice(0, 5)
-          .map((notification) => (
-            <p key={notification._id}>
-              🔔 {notification.message}
-            </p>
-          ))}
+        {notifications.slice(0, 5).map((notification) => (
+          <p key={notification._id}>🔔 {notification.message}</p>
+        ))}
       </div>
 
-<div
-  style={{
-    background: "#1e293b",
-    padding: "15px",
-    borderRadius: "10px",
-    marginBottom: "20px",
-  }}
->
-  <h3>Activity Feed</h3>
+      <div
+        style={{
+          background: "#1e293b",
+          padding: "15px",
+          borderRadius: "10px",
+          marginBottom: "20px",
+        }}
+      >
+        <h3>Activity Feed</h3>
+        {activities.slice(0, 10).map((activity) => (
+          <p key={activity._id}>{activity.action}</p>
+        ))}
+      </div>
 
-  {activities
-    .slice(0, 10)
-    .map((activity) => (
-      <p key={activity._id}>
-        {activity.action}
-      </p>
-    ))}
-</div>
       {/* Board */}
       <DragDropContext onDragEnd={handleDragEnd}>
         <div style={{ display: "flex", gap: "20px", overflowX: "auto", paddingBottom: "20px" }}>
@@ -575,13 +544,11 @@ function Board() {
                                 📅 {new Date(card.dueDate).toLocaleDateString()}
                               </p>
                             )}
-                            {/* FIX: assignedTo display added here, in scope of card */}
                             {card.assignedTo && (
                               <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#94a3b8" }}>
                                 👤 {card.assignedTo.name || card.assignedTo}
                               </p>
                             )}
-                            {/* FIX: assign user select moved here, in scope of card & list */}
                             <select
                               style={s.select}
                               value={card.assignedTo?._id || card.assignedTo || ""}
@@ -596,6 +563,78 @@ function Board() {
                                 </option>
                               ))}
                             </select>
+                            {/* Comments */}
+
+<div
+  style={{
+    marginTop: "10px",
+    borderTop: "1px solid #475569",
+    paddingTop: "8px",
+  }}
+>
+  {(comments[card._id] || []).map((comment) => (
+    <p
+      key={comment._id}
+      style={{
+        fontSize: "12px",
+        margin: "4px 0",
+      }}
+    >
+      <strong>{comment.user.name}:</strong>{" "}
+      {comment.text}
+    </p>
+  ))}
+
+  <input
+    style={{
+      width: "100%",
+      marginTop: "8px",
+      padding: "6px",
+      borderRadius: "5px",
+      border: "1px solid #475569",
+      background: "#1e293b",
+      color: "white",
+    }}
+    placeholder="Write a comment..."
+    value={commentText[card._id] || ""}
+    onChange={(e) =>
+      setCommentText((prev) => ({
+        ...prev,
+        [card._id]: e.target.value,
+      }))
+    }
+  />
+
+  <button
+    style={{
+      marginTop: "6px",
+      width: "100%",
+      padding: "6px",
+      border: "none",
+      borderRadius: "5px",
+      background: "#3b82f6",
+      color: "white",
+      cursor: "pointer",
+    }}
+    onClick={async () => {
+      if (!commentText[card._id]) return;
+
+      await createComment(
+        commentText[card._id],
+        card._id
+      );
+
+      loadComments(card._id);
+
+      setCommentText((prev) => ({
+        ...prev,
+        [card._id]: "",
+      }));
+    }}
+  >
+    Send
+  </button>
+</div>
                             <div style={s.cardActions}>
                               <button
                                 style={s.btn()}
@@ -687,7 +726,6 @@ function Board() {
               </div>
             )}
 
-            {/* FIX: due date input now stands alone, without the misplaced <select> */}
             {cfg.showDueDate && (
               <div>
                 <label style={s.label}>Due Date</label>
