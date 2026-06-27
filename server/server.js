@@ -3,6 +3,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const http = require("http");
 const invitationRoutes = require("./routes/invitationRoutes");
+const chatRoutes = require("./routes/chatRoutes");
 const notificationRoutes =
   require(
     "./routes/notificationRoutes"
@@ -51,6 +52,7 @@ app.use("/api/workspaces", workspaceRoutes);
 app.use("/api/boards", boardRoutes);
 app.use("/api/lists", listRoutes);
 app.use("/api/cards", cardRoutes);
+app.use("/api/chat", chatRoutes);
 app.use("/api/users", userRoutes);
 app.use(
   "/api/comments",

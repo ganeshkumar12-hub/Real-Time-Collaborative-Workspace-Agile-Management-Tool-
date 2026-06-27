@@ -1,6 +1,7 @@
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
+import { getMessages, sendMessage } from "../services/chatService";
 import useAuthStore from "../store/authStore";
 import { getActivities } from "../services/activityService";
 import {
@@ -38,6 +39,9 @@ function Board() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [typingUsers, setTypingUsers] = useState({});
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatText, setChatText] = useState("");
+  const chatEndRef = useRef(null);
 
   // Refs to hold per-card typing timers (so we can clearTimeout on each)
   const typingTimers = useRef({});
@@ -112,6 +116,11 @@ function Board() {
       });
     });
 
+    // Step 4.11: Listen for live chat messages
+    socket.on("chatMessage", (message) => {
+      setChatMessages((prev) => [...prev, message]);
+    });
+
     return () => {
       socket.emit("leaveBoard", id);
       socket.off("connect");
@@ -122,6 +131,7 @@ function Board() {
       socket.off("commentDeleted");
       socket.off("typing");
       socket.off("stopTyping");
+      socket.off("chatMessage");
     };
   }, [id]);
 
@@ -140,6 +150,9 @@ function Board() {
         setUsers(usersData);
         setNotifications(notificationData);
         setActivities(activityData);
+
+        // Step 4.10: Load chat messages when board opens
+        await loadChatMessages();
 
         const cardEntries = await Promise.all(
           listsData.map(async (list) => [
@@ -162,6 +175,11 @@ function Board() {
     loadData();
   }, [id]);
 
+  // Step 4.13: Auto-scroll chat to bottom whenever messages change
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
+
   // ── Search ─────────────────────────────────────────────────────
   useEffect(() => {
     const search = async () => {
@@ -180,6 +198,27 @@ function Board() {
     const timer = setTimeout(search, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // ── Chat ───────────────────────────────────────────────────────
+  const loadChatMessages = async () => {
+    try {
+      const data = await getMessages(id);
+      setChatMessages(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Step 4.12: Send chat message
+  const handleSendChat = async () => {
+    if (!chatText.trim()) return;
+    try {
+      await sendMessage(id, chatText);
+      setChatText("");
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // ── Comments ───────────────────────────────────────────────────
   const loadComments = async (cardId) => {
@@ -641,6 +680,63 @@ function Board() {
         {activities.slice(0, 10).map((activity) => (
           <p key={activity._id}>{activity.action}</p>
         ))}
+      </div>
+
+      {/* Team Chat */}
+      <div
+        style={{
+          background: "#1e293b",
+          padding: "15px",
+          borderRadius: "10px",
+          marginBottom: "20px",
+        }}
+      >
+        <h3>Team Chat</h3>
+
+        {/* Message list */}
+        <div
+          style={{
+            maxHeight: "250px",
+            overflowY: "auto",
+            marginBottom: "10px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "6px",
+          }}
+        >
+          {chatMessages.map((msg) => (
+            <div
+              key={msg._id}
+              style={{
+                background: "#334155",
+                padding: "8px 12px",
+                borderRadius: "8px",
+                fontSize: "13px",
+              }}
+            >
+              <strong style={{ color: "#60a5fa" }}>
+                {msg.sender?.name || "Unknown"}:
+              </strong>{" "}
+              {msg.message}
+            </div>
+          ))}
+          {/* Step 4.13: auto-scroll anchor */}
+          <div ref={chatEndRef} />
+        </div>
+
+        {/* Chat input */}
+        <div style={{ display: "flex", gap: "8px" }}>
+          <input
+            style={{ ...s.input, flex: 1 }}
+            placeholder="Type a message..."
+            value={chatText}
+            onChange={(e) => setChatText(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSendChat()}
+          />
+          <button style={s.btn("primary")} onClick={handleSendChat}>
+            Send
+          </button>
+        </div>
       </div>
 
       {/* Board */}
