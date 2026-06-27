@@ -42,17 +42,35 @@ function Board() {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatText, setChatText] = useState("");
   const chatEndRef = useRef(null);
+  // Step 5.4: online users state
+  const [onlineUsers, setOnlineUsers] = useState([]);
 
   // Refs to hold per-card typing timers (so we can clearTimeout on each)
   const typingTimers = useRef({});
 
   // ── Socket connection ──────────────────────────────────────────
   useEffect(() => {
-    socket.emit("joinBoard", id);
+    // Step 5.5: send user info when joining the board
+    socket.emit("joinBoard", {
+      boardId: id,
+      user: {
+        id: user?.id,
+        name: user?.name,
+        email: user?.email,
+      },
+    });
 
     socket.on("connect", () => {
       console.log("Connected to Socket Server:", socket.id);
-      socket.emit("joinBoard", id);
+      // Re-join board on reconnect with user info
+      socket.emit("joinBoard", {
+        boardId: id,
+        user: {
+          id: user?.id,
+          name: user?.name,
+          email: user?.email,
+        },
+      });
     });
 
     socket.on("cardCreated", (card) => {
@@ -121,6 +139,11 @@ function Board() {
       setChatMessages((prev) => [...prev, message]);
     });
 
+    // Step 5.6: Listen for online users broadcast
+    socket.on("onlineUsers", (users) => {
+      setOnlineUsers(users);
+    });
+
     return () => {
       socket.emit("leaveBoard", id);
       socket.off("connect");
@@ -132,8 +155,10 @@ function Board() {
       socket.off("typing");
       socket.off("stopTyping");
       socket.off("chatMessage");
+      // Step 5.7: cleanup onlineUsers listener
+      socket.off("onlineUsers");
     };
-  }, [id]);
+  }, [id, user]);
 
   // ── Load board data ────────────────────────────────────────────
   useEffect(() => {
@@ -582,7 +607,7 @@ function Board() {
     <div style={s.page}>
       <h1 style={{ marginBottom: "6px" }}>Board</h1>
 
-      {/* Users */}
+      {/* Members */}
       {users.length > 0 && (
         <div style={{ marginBottom: "20px" }}>
           <p style={{ color: "#94a3b8", fontSize: "13px", marginBottom: "8px" }}>
@@ -595,6 +620,27 @@ function Board() {
           ))}
         </div>
       )}
+
+      {/* Step 5.8: Online Users */}
+      <div
+        style={{
+          background: "#1e293b",
+          padding: "15px",
+          borderRadius: "10px",
+          marginBottom: "20px",
+        }}
+      >
+        <h3>🟢 Online Users</h3>
+        {onlineUsers.length === 0 ? (
+          <p>No users online</p>
+        ) : (
+          onlineUsers.map((onlineUser) => (
+            <p key={onlineUser.id} style={{ margin: "4px 0", fontSize: "14px" }}>
+              🟢 {onlineUser.name}
+            </p>
+          ))
+        )}
+      </div>
 
       {/* Global error */}
       {error && !modal && <div style={s.error}>{error}</div>}
