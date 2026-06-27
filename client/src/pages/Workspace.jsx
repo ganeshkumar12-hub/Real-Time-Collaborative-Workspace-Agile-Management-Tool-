@@ -9,18 +9,23 @@ import {
   deleteBoard,
 } from "../services/boardService";
 
+import { getUsers } from "../services/userService";
+import { inviteUser } from "../services/invitationService";
+
 function Workspace() {
   const navigate = useNavigate();
 
   const { id } = useParams();
 
-  const [workspace, setWorkspace] =
-    useState(null);
+  const [workspace, setWorkspace] = useState(null);
 
-  const [boards, setBoards] =
-    useState([]);
+  const [boards, setBoards] = useState([]);
 
-  const [boardName, setBoardName] =
+  const [boardName, setBoardName] = useState("");
+
+  const [users, setUsers] = useState([]);
+
+  const [selectedUser, setSelectedUser] =
     useState("");
 
   useEffect(() => {
@@ -50,8 +55,21 @@ function Workspace() {
         }
       };
 
+    const loadUsers =
+      async () => {
+        try {
+          const data =
+            await getUsers();
+
+          setUsers(data);
+        } catch (error) {
+          console.log(error);
+        }
+      };
+
     loadWorkspace();
     loadBoards();
+    loadUsers();
   }, [id]);
 
   const handleCreateBoard =
@@ -76,6 +94,30 @@ function Workspace() {
       }
     };
 
+  const handleInviteUser =
+    async () => {
+      if (!selectedUser) return;
+
+      try {
+        await inviteUser(
+          id,
+          selectedUser
+        );
+
+        alert(
+          "Invitation sent successfully!"
+        );
+
+        setSelectedUser("");
+      } catch (error) {
+        alert(
+          error.response?.data
+            ?.message ||
+            "Failed to send invitation"
+        );
+      }
+    };
+
   const handleDeleteBoard =
     async (boardId) => {
       const confirmDelete =
@@ -92,7 +134,8 @@ function Workspace() {
         setBoards(
           boards.filter(
             (board) =>
-              board._id !== boardId
+              board._id !==
+              boardId
           )
         );
       } catch (error) {
@@ -135,8 +178,51 @@ function Workspace() {
 
       <p>
         Total Members:{" "}
-        {workspace.members?.length}
+        {
+          workspace.members
+            ?.length
+        }
       </p>
+
+      <hr />
+
+      <h2>
+        Invite Member
+      </h2>
+
+      <select
+        value={selectedUser}
+        onChange={(e) =>
+          setSelectedUser(
+            e.target.value
+          )
+        }
+      >
+        <option value="">
+          Select User
+        </option>
+
+        {users.map((user) => (
+          <option
+            key={user._id}
+            value={user._id}
+          >
+            {user.name} (
+            {user.email})
+          </option>
+        ))}
+      </select>
+
+      <button
+        onClick={
+          handleInviteUser
+        }
+        style={{
+          marginLeft: "10px",
+        }}
+      >
+        Invite
+      </button>
 
       <hr />
 
@@ -183,7 +269,8 @@ function Workspace() {
                   "10px",
                 borderRadius:
                   "10px",
-                display: "flex",
+                display:
+                  "flex",
                 justifyContent:
                   "space-between",
                 alignItems:

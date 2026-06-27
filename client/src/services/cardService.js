@@ -171,3 +171,17 @@ export const assignUser = async (
 
   return response.data;
 };
+export const searchCards = async (query) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.get(
+    `${API_URL}/search?q=${encodeURIComponent(query)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return response.data;
+};

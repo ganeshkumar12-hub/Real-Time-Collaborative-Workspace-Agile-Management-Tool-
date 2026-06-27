@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const http = require("http");
+const invitationRoutes = require("./routes/invitationRoutes");
 const notificationRoutes =
   require(
     "./routes/notificationRoutes"
@@ -10,6 +11,7 @@ const { protect } = require("./middleware/authMiddleware");
 const connectDB = require("./config/db");
 const {
   initializeSocket,
+  getIO,
 } = require("./socket/socket");
 const commentRoutes =
   require("./routes/commentRoutes");
@@ -34,6 +36,12 @@ initializeSocket(server);
 
 app.use(cors());
 app.use(express.json());
+app.use("/api/invitations", invitationRoutes);
+app.use((req, res, next) => {
+  req.io = getIO();
+  next();
+});
+
 app.use(
   "/api/notifications",
   notificationRoutes

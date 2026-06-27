@@ -1,17 +1,15 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import useAuthStore from "../store/authStore";
 
 function Register() {
-  const register =
-    useAuthStore((state) => state.register);
+  const register = useAuthStore((state) => state.register);
 
   const navigate = useNavigate();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] =
-    useState("");
+  const [password, setPassword] = useState("");
 
   const submitHandler = async (e) => {
     e.preventDefault();
@@ -74,6 +72,29 @@ function Register() {
           Register
         </button>
       </form>
+
+      <div
+        style={{
+          textAlign: "center",
+          marginTop: "20px",
+        }}
+      >
+        <span style={{ color: "#94a3b8" }}>
+          Already have an account?
+        </span>
+
+        <Link
+          to="/"
+          style={{
+            marginLeft: "6px",
+            color: "#60a5fa",
+            fontWeight: "600",
+            textDecoration: "none",
+          }}
+        >
+          Login
+        </Link>
+      </div>
     </div>
   );
 }

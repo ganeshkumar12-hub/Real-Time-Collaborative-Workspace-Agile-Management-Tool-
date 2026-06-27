@@ -1,24 +1,31 @@
-import { useEffect, useState } from "react";
+import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getUsers } from "../services/userService";
-import socket from "../services/socket";
-import { getComments, createComment } from "../services/commentService";
-import { getNotifications } from "../services/notificationService";
+import useAuthStore from "../store/authStore";
 import { getActivities } from "../services/activityService";
-import { createList, getListsByBoard, deleteList } from "../services/listService";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import {
+  assignUser,
   createCard,
   deleteCard,
   getCardsByList,
+  moveCard,
+  searchCards,
   updateCard,
   updateDueDate,
-  moveCard,
-  assignUser,
 } from "../services/cardService";
+import {
+  createComment,
+  deleteComment,
+  getComments,
+} from "../services/commentService";
+import { createList, deleteList, getListsByBoard } from "../services/listService";
+import { getNotifications } from "../services/notificationService";
+import socket from "../services/socket";
+import { getUsers } from "../services/userService";
 
 function Board() {
   const { id } = useParams();
+  const user = useAuthStore((state) => state.user);
   const [users, setUsers] = useState([]);
   const [lists, setLists] = useState([]);
   const [cards, setCards] = useState({});
@@ -28,11 +35,20 @@ function Board() {
   const [commentText, setCommentText] = useState({});
   const [notifications, setNotifications] = useState([]);
   const [activities, setActivities] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [typingUsers, setTypingUsers] = useState({});
+
+  // Refs to hold per-card typing timers (so we can clearTimeout on each)
+  const typingTimers = useRef({});
 
   // ── Socket connection ──────────────────────────────────────────
   useEffect(() => {
+    socket.emit("joinBoard", id);
+
     socket.on("connect", () => {
       console.log("Connected to Socket Server:", socket.id);
+      socket.emit("joinBoard", id);
     });
 
     socket.on("cardCreated", (card) => {
@@ -64,29 +80,65 @@ function Board() {
       });
     });
 
+    socket.on("commentCreated", (comment) => {
+      setComments((prev) => ({
+        ...prev,
+        [comment.card]: [...(prev[comment.card] || []), comment],
+      }));
+    });
+
+    socket.on("commentDeleted", (commentId) => {
+      setComments((prev) => {
+        const updated = {};
+        Object.keys(prev).forEach((cardId) => {
+          updated[cardId] = prev[cardId].filter((c) => c._id !== commentId);
+        });
+        return updated;
+      });
+    });
+
+    socket.on("typing", ({ cardId, user }) => {
+      setTypingUsers((prev) => ({
+        ...prev,
+        [cardId]: user,
+      }));
+    });
+
+    socket.on("stopTyping", ({ cardId }) => {
+      setTypingUsers((prev) => {
+        const updated = { ...prev };
+        delete updated[cardId];
+        return updated;
+      });
+    });
+
     return () => {
+      socket.emit("leaveBoard", id);
       socket.off("connect");
       socket.off("cardCreated");
       socket.off("cardUpdated");
       socket.off("cardDeleted");
+      socket.off("commentCreated");
+      socket.off("commentDeleted");
+      socket.off("typing");
+      socket.off("stopTyping");
     };
-  }, []);
+  }, [id]);
 
   // ── Load board data ────────────────────────────────────────────
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [listsData, usersData] = await Promise.all([
-          getListsByBoard(id),
-          getUsers(),
-        ]);
+        const [listsData, usersData, notificationData, activityData] =
+          await Promise.all([
+            getListsByBoard(id),
+            getUsers(),
+            getNotifications(),
+            getActivities(id),
+          ]);
         setLists(listsData);
         setUsers(usersData);
-
-        const notificationData = await getNotifications();
         setNotifications(notificationData);
-
-        const activityData = await getActivities();
         setActivities(activityData);
 
         const cardEntries = await Promise.all(
@@ -98,10 +150,9 @@ function Board() {
         const cardsMap = Object.fromEntries(cardEntries);
         setCards(cardsMap);
 
-        // Load comments for every card
-        Object.values(cardsMap).flat().forEach((card) => {
-          loadComments(card._id);
-        });
+        Object.values(cardsMap)
+          .flat()
+          .forEach((card) => loadComments(card._id));
       } catch (err) {
         setError("Failed to load board data.");
         console.error(err);
@@ -111,18 +162,78 @@ function Board() {
     loadData();
   }, [id]);
 
+  // ── Search ─────────────────────────────────────────────────────
+  useEffect(() => {
+    const search = async () => {
+      if (!searchQuery.trim()) {
+        setSearchResults([]);
+        return;
+      }
+      try {
+        const results = await searchCards(searchQuery);
+        setSearchResults(results);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    const timer = setTimeout(search, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // ── Comments ───────────────────────────────────────────────────
   const loadComments = async (cardId) => {
     try {
       const data = await getComments(cardId);
-      setComments((prev) => ({
-        ...prev,
-        [cardId]: data,
-      }));
-    } catch (error) {
-      console.log(error);
+      setComments((prev) => ({ ...prev, [cardId]: data }));
+    } catch (err) {
+      console.error(err);
     }
   };
 
+  // Emit typing with the logged-in user's name so the server can broadcast it
+  const handleCommentChange = (cardId, value) => {
+    setCommentText((prev) => ({ ...prev, [cardId]: value }));
+
+    socket.emit("typing", {
+      cardId,
+      boardId: id,
+      user: user?.name,
+    });
+
+    // Reset the stopTyping debounce timer for this card
+    if (typingTimers.current[cardId]) {
+      clearTimeout(typingTimers.current[cardId]);
+    }
+    typingTimers.current[cardId] = setTimeout(() => {
+      socket.emit("stopTyping", { cardId, boardId: id });
+    }, 1500);
+  };
+
+  const handleSendComment = async (cardId) => {
+    if (!commentText[cardId]?.trim()) return;
+    try {
+      await createComment(commentText[cardId], cardId);
+      setCommentText((prev) => ({ ...prev, [cardId]: "" }));
+      // Stop typing indicator immediately when comment is sent
+      socket.emit("stopTyping", { cardId, boardId: id });
+      if (typingTimers.current[cardId]) {
+        clearTimeout(typingTimers.current[cardId]);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    try {
+      await deleteComment(commentId);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // ── Assign user ────────────────────────────────────────────────
   const handleAssignUser = async (listId, cardId, userId) => {
     try {
       const updatedCard = await assignUser(cardId, userId);
@@ -132,12 +243,13 @@ function Board() {
           card._id === cardId ? updatedCard : card
         ),
       }));
-    } catch (error) {
-      console.log(error);
+    } catch (err) {
+      setError("Failed to assign user.");
+      console.error(err);
     }
   };
 
-  // Modal state
+  // ── Modal state ────────────────────────────────────────────────
   // modal shapes:
   // { type: "createCard", listId }
   // { type: "editCard", listId, cardId, title, description, dueDate }
@@ -148,7 +260,6 @@ function Board() {
   const [modalDescription, setModalDescription] = useState("");
   const [modalDueDate, setModalDueDate] = useState("");
 
-  // ── Modal helpers ──────────────────────────────────────────────
   const openModal = (shape) => {
     setModal(shape);
     setModalTitle(shape.title || "");
@@ -174,11 +285,8 @@ function Board() {
           setError("Task title is required.");
           return;
         }
-        const card = await createCard(modalTitle, modalDescription, modal.listId);
-        setCards((prev) => ({
-          ...prev,
-          [modal.listId]: [...(prev[modal.listId] || []), card],
-        }));
+        // cardCreated socket event will update state
+        await createCard(modalTitle, modalDescription, modal.listId);
         closeModal();
       }
 
@@ -467,6 +575,45 @@ function Board() {
         </button>
       </div>
 
+      {/* Search */}
+      <div style={{ marginBottom: "20px" }}>
+        <input
+          style={{ ...s.input, width: "300px" }}
+          type="text"
+          placeholder="🔍 Search cards..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+
+      {/* Search results */}
+      {searchQuery && (
+        <div
+          style={{
+            background: "#1e293b",
+            padding: "15px",
+            borderRadius: "10px",
+            marginBottom: "20px",
+          }}
+        >
+          <h3>Search Results</h3>
+          {searchResults.length === 0 ? (
+            <p>No cards found.</p>
+          ) : (
+            searchResults.map((card) => (
+              <div
+                key={card._id}
+                style={{ padding: "10px", borderBottom: "1px solid #334155" }}
+              >
+                <strong>{card.title}</strong>
+                <p>{card.description}</p>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Notifications */}
       <div
         style={{
           background: "#1e293b",
@@ -481,6 +628,7 @@ function Board() {
         ))}
       </div>
 
+      {/* Activity Feed */}
       <div
         style={{
           background: "#1e293b",
@@ -534,21 +682,25 @@ function Board() {
                             style={s.card(provided.draggableProps.style)}
                           >
                             <strong style={{ fontSize: "14px" }}>{card.title}</strong>
+
                             {card.description && (
                               <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#94a3b8" }}>
                                 {card.description}
                               </p>
                             )}
+
                             {card.dueDate && (
                               <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#64748b" }}>
                                 📅 {new Date(card.dueDate).toLocaleDateString()}
                               </p>
                             )}
+
                             {card.assignedTo && (
                               <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#94a3b8" }}>
                                 👤 {card.assignedTo.name || card.assignedTo}
                               </p>
                             )}
+
                             <select
                               style={s.select}
                               value={card.assignedTo?._id || card.assignedTo || ""}
@@ -563,78 +715,100 @@ function Board() {
                                 </option>
                               ))}
                             </select>
+
                             {/* Comments */}
+                            <div
+                              style={{
+                                marginTop: "10px",
+                                borderTop: "1px solid #475569",
+                                paddingTop: "8px",
+                              }}
+                            >
+                              {(comments[card._id] || []).map((comment) => (
+                                <div
+                                  key={comment._id}
+                                  style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "flex-start",
+                                    margin: "4px 0",
+                                  }}
+                                >
+                                  <p style={{ fontSize: "12px", margin: 0 }}>
+                                    <strong>{comment.author?.name}:</strong>{" "}
+                                    {comment.text}
+                                  </p>
+                                  <button
+                                    style={{
+                                      marginLeft: "8px",
+                                      padding: "2px 6px",
+                                      border: "none",
+                                      borderRadius: "4px",
+                                      background: "#ef4444",
+                                      color: "white",
+                                      cursor: "pointer",
+                                      fontSize: "11px",
+                                      flexShrink: 0,
+                                    }}
+                                    onClick={() => handleDeleteComment(comment._id)}
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ))}
 
-<div
-  style={{
-    marginTop: "10px",
-    borderTop: "1px solid #475569",
-    paddingTop: "8px",
-  }}
->
-  {(comments[card._id] || []).map((comment) => (
-    <p
-      key={comment._id}
-      style={{
-        fontSize: "12px",
-        margin: "4px 0",
-      }}
-    >
-      <strong>{comment.user.name}:</strong>{" "}
-      {comment.text}
-    </p>
-  ))}
+                              {/* Typing indicator */}
+                              {typingUsers[card._id] && (
+                                <p
+                                  style={{
+                                    color: "#38bdf8",
+                                    fontSize: "12px",
+                                    margin: "6px 0 0",
+                                    fontStyle: "italic",
+                                  }}
+                                >
+                                  {typingUsers[card._id]} is typing...
+                                </p>
+                              )}
 
-  <input
-    style={{
-      width: "100%",
-      marginTop: "8px",
-      padding: "6px",
-      borderRadius: "5px",
-      border: "1px solid #475569",
-      background: "#1e293b",
-      color: "white",
-    }}
-    placeholder="Write a comment..."
-    value={commentText[card._id] || ""}
-    onChange={(e) =>
-      setCommentText((prev) => ({
-        ...prev,
-        [card._id]: e.target.value,
-      }))
-    }
-  />
+                              <input
+                                style={{
+                                  width: "100%",
+                                  marginTop: "8px",
+                                  padding: "6px",
+                                  borderRadius: "5px",
+                                  border: "1px solid #475569",
+                                  background: "#1e293b",
+                                  color: "white",
+                                  boxSizing: "border-box",
+                                }}
+                                placeholder="Write a comment..."
+                                value={commentText[card._id] || ""}
+                                onChange={(e) =>
+                                  handleCommentChange(card._id, e.target.value)
+                                }
+                                onKeyDown={(e) =>
+                                  e.key === "Enter" && handleSendComment(card._id)
+                                }
+                              />
 
-  <button
-    style={{
-      marginTop: "6px",
-      width: "100%",
-      padding: "6px",
-      border: "none",
-      borderRadius: "5px",
-      background: "#3b82f6",
-      color: "white",
-      cursor: "pointer",
-    }}
-    onClick={async () => {
-      if (!commentText[card._id]) return;
+                              <button
+                                style={{
+                                  marginTop: "6px",
+                                  width: "100%",
+                                  padding: "6px",
+                                  border: "none",
+                                  borderRadius: "5px",
+                                  background: "#3b82f6",
+                                  color: "white",
+                                  cursor: "pointer",
+                                }}
+                                onClick={() => handleSendComment(card._id)}
+                              >
+                                Send
+                              </button>
+                            </div>
 
-      await createComment(
-        commentText[card._id],
-        card._id
-      );
-
-      loadComments(card._id);
-
-      setCommentText((prev) => ({
-        ...prev,
-        [card._id]: "",
-      }));
-    }}
-  >
-    Send
-  </button>
-</div>
                             <div style={s.cardActions}>
                               <button
                                 style={s.btn()}

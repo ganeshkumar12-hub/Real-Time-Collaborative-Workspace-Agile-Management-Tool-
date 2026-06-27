@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import useAuthStore from "../store/authStore";
 
 function Login() {
@@ -55,6 +55,27 @@ function Login() {
           Login
         </button>
       </form>
+
+      <p
+        style={{
+          marginTop: "15px",
+          textAlign: "center",
+          color: "#94a3b8",
+          fontSize: "14px",
+        }}
+      >
+        Don't have an account?{" "}
+        <Link
+          to="/register"
+          style={{
+            color: "#3b82f6",
+            textDecoration: "none",
+            fontWeight: "bold",
+          }}
+        >
+          Register here
+        </Link>
+      </p>
     </div>
   );
 }

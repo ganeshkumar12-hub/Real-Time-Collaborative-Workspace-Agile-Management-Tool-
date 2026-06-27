@@ -1,13 +1,10 @@
-
 const Activity = require("../models/Activity");
 const Card = require("../models/Card");
-const Notification =
-  require("../models/Notification");
+const Notification = require("../models/Notification");
 const List = require("../models/List");
-const {
-  getIO,
-} = require("../socket/socket");
+const { getIO } = require("../socket/socket");
 
+// Create Card
 const createCard = async (req, res) => {
   try {
     const { title, description, listId } = req.body;
@@ -25,16 +22,16 @@ const createCard = async (req, res) => {
       description,
       list: listId,
     });
-    await Activity.create({
-  action: `Created card "${card.title}"`,
-  user: req.user?._id,
-  card: card._id,
-});
 
-    getIO().emit(
-      "cardCreated",
-      card
-    );
+    await Activity.create({
+      action: `Created card "${card.title}"`,
+      user: req.user?._id,
+      card: card._id,
+    });
+
+    getIO()
+      .to(list.board.toString())
+      .emit("cardCreated", card);
 
     res.status(201).json(card);
   } catch (error) {
@@ -44,6 +41,7 @@ const createCard = async (req, res) => {
   }
 };
 
+// Get Cards by List
 const getCardsByList = async (req, res) => {
   try {
     const cards = await Card.find({
@@ -58,6 +56,7 @@ const getCardsByList = async (req, res) => {
   }
 };
 
+// Get Card by ID
 const getCardById = async (req, res) => {
   try {
     const card = await Card.findById(req.params.id).populate(
@@ -78,7 +77,40 @@ const getCardById = async (req, res) => {
     });
   }
 };
+// Search Cards
+const searchCards = async (req, res) => {
+  try {
+    const { q } = req.query;
 
+    if (!q || q.trim() === "") {
+      return res.json([]);
+    }
+
+    const cards = await Card.find({
+      $or: [
+        {
+          title: {
+            $regex: q,
+            $options: "i",
+          },
+        },
+        {
+          description: {
+            $regex: q,
+            $options: "i",
+          },
+        },
+      ],
+    }).populate("assignedTo", "name email");
+
+    res.json(cards);
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+// Update Card
 const updateCard = async (req, res) => {
   try {
     const card = await Card.findById(req.params.id);
@@ -96,50 +128,53 @@ const updateCard = async (req, res) => {
     if (req.body.description !== undefined) {
       card.description = req.body.description;
     }
+
     if (req.body.dueDate !== undefined) {
-  card.dueDate = req.body.dueDate;
+      card.dueDate = req.body.dueDate;
 
-  await Activity.create({
-    action: `Updated due date for "${card.title}"`,
-    user: req.user?._id,
-    card: card._id,
-  });
-}
-   if (req.body.assignedTo !== undefined) {
-  card.assignedTo =
-    req.body.assignedTo;
+      await Activity.create({
+        action: `Updated due date for "${card.title}"`,
+        user: req.user?._id,
+        card: card._id,
+      });
+    }
 
-  await Activity.create({
-    action: `Assigned card "${card.title}"`,
-    user: req.user?._id,
-    card: card._id,
-  });
+    if (req.body.assignedTo !== undefined) {
+      card.assignedTo = req.body.assignedTo;
 
-  await Notification.create({
-    message: `You were assigned to "${card.title}"`,
-    user: req.body.assignedTo,
-  });
-}
+      await Activity.create({
+        action: `Assigned card "${card.title}"`,
+        user: req.user?._id,
+        card: card._id,
+      });
+
+      await Notification.create({
+        message: `You were assigned to "${card.title}"`,
+        user: req.body.assignedTo,
+      });
+    }
 
     if (req.body.list !== undefined) {
-  card.list = req.body.list;
+      card.list = req.body.list;
 
-  await Activity.create({
-    action: `Moved card "${card.title}"`,
-    user: req.user?._id,
-    card: card._id,
-  });
-}
+      await Activity.create({
+        action: `Moved card "${card.title}"`,
+        user: req.user?._id,
+        card: card._id,
+      });
+    }
 
     const updatedCard = await card.save();
 
     const populatedCard = await Card.findById(
       updatedCard._id
     ).populate("assignedTo", "name email");
-    getIO().emit(
-  "cardUpdated",
-  populatedCard
-);
+
+    const list = await List.findById(populatedCard.list);
+
+    getIO()
+      .to(list.board.toString())
+      .emit("cardUpdated", populatedCard);
 
     res.json(populatedCard);
   } catch (error) {
@@ -149,6 +184,7 @@ const updateCard = async (req, res) => {
   }
 };
 
+// Delete Card
 const deleteCard = async (req, res) => {
   try {
     const card = await Card.findById(req.params.id);
@@ -158,15 +194,19 @@ const deleteCard = async (req, res) => {
         message: "Card not found",
       });
     }
-    getIO().emit(
-  "cardDeleted",
-  card._id
-);
-await Activity.create({
-  action: `Deleted card "${card.title}"`,
-  user: req.user?._id,
-  card: card._id,
-});
+
+    const list = await List.findById(card.list);
+
+    getIO()
+      .to(list.board.toString())
+      .emit("cardDeleted", card._id);
+
+    await Activity.create({
+      action: `Deleted card "${card.title}"`,
+      user: req.user?._id,
+      card: card._id,
+    });
+
     await card.deleteOne();
 
     res.json({
@@ -183,6 +223,7 @@ module.exports = {
   createCard,
   getCardsByList,
   getCardById,
+  searchCards,
   updateCard,
   deleteCard,
 };

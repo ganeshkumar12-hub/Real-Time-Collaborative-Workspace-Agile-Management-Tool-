@@ -2,7 +2,9 @@ const express = require("express");
 const {
   createComment,
   getCommentsByCard,
+  deleteComment,
 } = require("../controllers/commentController");
+
 
 const { protect } =
   require("../middleware/authMiddleware");
@@ -20,5 +22,9 @@ router.get(
   protect,
   getCommentsByCard
 );
-
+router.delete(
+  "/:id",
+  protect,
+  deleteComment
+);
 module.exports = router;
