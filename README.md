@@ -119,34 +119,6 @@ Real-Time-Collaborative-Workspace-Agile-Management-Tool
 
 ---
 
-# 📸 Screenshots
-
-## Login
-
-(Add Screenshot)
-
-## Register
-
-(Add Screenshot)
-
-## Dashboard
-
-(Add Screenshot)
-
-## Workspace
-
-(Add Screenshot)
-
-## Board
-
-(Add Screenshot)
-
-## Team Chat
-
-(Add Screenshot)
-
----
-
 # ⚙ Installation
 
 ## Clone Repository
