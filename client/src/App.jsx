@@ -1,3 +1,5 @@
+
+
 import {
   BrowserRouter,
   Routes,
@@ -10,40 +12,50 @@ import Dashboard from "./pages/Dashboard";
 import Workspace from "./pages/Workspace";
 import Board from "./pages/Board";
 import Invitations from "./pages/Invitations";
-function App() {
+
+import ProtectedLayout from "./components/layout/ProtectedLayout";
+
+export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route
-          path="/"
-          element={<Login />}
-        />
+
+        {/* Public Routes */}
+
+        <Route path="/" element={<Login />} />
 
         <Route
           path="/register"
           element={<Register />}
         />
 
-        <Route
-          path="/dashboard"
-          element={<Dashboard />}
-        />
+        {/* Protected Layout */}
 
-        <Route
-          path="/workspace/:id"
-          element={<Workspace />}
-        />
-<Route
-  path="/invitations"
-  element={<Invitations />}
-/>
-        <Route
-          path="/board/:id"
-          element={<Board />}
-        />
+        <Route element={<ProtectedLayout />}>
+
+          <Route
+            path="/dashboard"
+            element={<Dashboard />}
+          />
+
+          <Route
+            path="/workspace/:id"
+            element={<Workspace />}
+          />
+
+          <Route
+            path="/board/:id"
+            element={<Board />}
+          />
+
+          <Route
+            path="/invitations"
+            element={<Invitations />}
+          />
+
+        </Route>
+
       </Routes>
     </BrowserRouter>
   );
 }
-
-export default App;
