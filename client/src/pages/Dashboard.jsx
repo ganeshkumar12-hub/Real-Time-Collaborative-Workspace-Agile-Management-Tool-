@@ -1,199 +1,144 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
-import { createWorkspace, getWorkspaces } from "../services/workspaceService";
+import DashboardHeader from "../components/dashboard/DashboardHeader";
+import DashboardStats from "../components/dashboard/DashboardStats";
+import WorkspaceGrid from "../components/dashboard/WorkspaceGrid";
+import ActivityTimeline from "../components/dashboard/ActivityTimeline";
+import UpcomingTasks from "../components/dashboard/UpcomingTasks";
+import TeamMembers from "../components/dashboard/TeamMembers";
+
+import {
+  getWorkspaces,
+  createWorkspace,
+} from "../services/workspaceService";
 
 import useAuthStore from "../store/authStore";
 
-function Dashboard() {
-  const navigate = useNavigate();
+import Modal from "../components/ui/Modal";
+import Button from "../components/ui/Button";
 
-  const logout = useAuthStore((state) => state.logout);
+export default function Dashboard() {
+  const { user } = useAuthStore();
 
   const [workspaces, setWorkspaces] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [openModal, setOpenModal] = useState(false);
   const [workspaceName, setWorkspaceName] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [creating, setCreating] = useState(false);
 
-  useEffect(() => {
-    const loadWorkspaces = async () => {
-      try {
-        const data = await getWorkspaces();
-        setWorkspaces(data);
-      } catch (error) {
-        console.log(error);
-      }
-    };
+  async function loadWorkspaces() {
+    try {
+      setLoading(true);
 
-    loadWorkspaces();
-  }, []);
+      const data = await getWorkspaces();
+      setWorkspaces(data);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load workspaces");
+    } finally {
+      setLoading(false);
+    }
+  }
 
-  const handleCreateWorkspace = async () => {
-    if (!workspaceName) return;
+  async function handleCreateWorkspace() {
+    if (!workspaceName.trim()) {
+      toast.error("Workspace name is required");
+      return;
+    }
+
+    const toastId = toast.loading("Creating workspace...");
 
     try {
-      const newWorkspace = await createWorkspace(workspaceName);
-      setWorkspaces([...workspaces, newWorkspace]);
+      setCreating(true);
+
+      await createWorkspace(workspaceName);
+
+      toast.success("Workspace created successfully!", {
+        id: toastId,
+      });
+
       setWorkspaceName("");
+      setOpenModal(false);
+
+      await loadWorkspaces();
     } catch (error) {
-      console.log(error);
+      console.error(error);
+
+      toast.error("Failed to create workspace!", {
+        id: toastId,
+      });
+    } finally {
+      setCreating(false);
     }
-  };
+  }
+useEffect(() => {
+  toast.success("Dashboard Loaded!");
+}, []);
+  useEffect(() => {
+    loadWorkspaces();
 
-  const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
-
-  const filteredWorkspaces = workspaces.filter((workspace) =>
-    workspace.name.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
-
-  const totalMembers = workspaces.reduce(
-    (total, workspace) => total + (workspace.members?.length || 0),
-    0,
-  );
+    // Test Toast (Remove later)
+    
+toast.success("Dashboard Loaded!");
+  }, []);
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#0f172a",
-        color: "white",
-        padding: "30px",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <h1>Workspace Dashboard</h1>
+    <div>
+      <DashboardHeader
+        user={user}
+        onCreateWorkspace={() => setOpenModal(true)}
+      />
 
-        <button onClick={handleLogout}>Logout</button>
-      </div>
+      <DashboardStats workspaces={workspaces} />
 
-      <hr />
+      <WorkspaceGrid
+        workspaces={workspaces}
+        loading={loading}
+        onRefresh={loadWorkspaces}
+      />
 
-      {/* Statistics Cards */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-          gap: "20px",
-          marginTop: "20px",
-          marginBottom: "20px",
-        }}
-      >
-        <div
-          style={{
-            background: "#1e293b",
-            padding: "20px",
-            borderRadius: "12px",
-            textAlign: "center",
-          }}
-        >
-          <h3>Total Workspaces</h3>
-          <h1>{workspaces.length}</h1>
+      <div className="grid lg:grid-cols-3 gap-6 mt-10">
+        <div className="lg:col-span-2">
+          <ActivityTimeline />
         </div>
 
-        <div
-          style={{
-            background: "#1e293b",
-            padding: "20px",
-            borderRadius: "12px",
-            textAlign: "center",
-          }}
-        >
-          <h3>Total Members</h3>
-          <h1>{totalMembers}</h1>
-        </div>
-
-        <div
-          style={{
-            background: "#1e293b",
-            padding: "20px",
-            borderRadius: "12px",
-            textAlign: "center",
-          }}
-        >
-          <h3>Active Workspaces</h3>
-          <h1>{workspaces.length}</h1>
+        <div className="space-y-6">
+          <UpcomingTasks />
+          <TeamMembers />
         </div>
       </div>
 
-      {/* Search */}
-      <div style={{ marginBottom: "20px" }}>
-        <input
-          type="text"
-          placeholder="Search Workspace..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{ padding: "10px", width: "250px" }}
-        />
-      </div>
+      <Modal open={openModal}>
+        <h2 className="text-2xl font-bold mb-6">
+          Create Workspace
+        </h2>
 
-      {/* Create Workspace */}
-      <div style={{ marginBottom: "20px" }}>
         <input
           type="text"
           placeholder="Workspace Name"
           value={workspaceName}
           onChange={(e) => setWorkspaceName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleCreateWorkspace()}
-          style={{ padding: "10px", marginRight: "10px" }}
+          className="w-full rounded-xl border border-slate-700 bg-slate-800 p-3 mb-6 outline-none"
         />
-        <button onClick={handleCreateWorkspace}>Create Workspace</button>
-      </div>
 
-      {/* Pending Invitations */}
-      <div style={{ marginBottom: "20px" }}>
-        <button
-          onClick={() => navigate("/invitations")}
-          style={{ padding: "10px 20px", cursor: "pointer" }}
-        >
-          📩 Pending Invitations
-        </button>
-      </div>
-
-      {/* Workspace Cards */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit,minmax(250px,1fr))",
-          gap: "20px",
-        }}
-      >
-        {filteredWorkspaces.map((workspace) => (
-          <div
-            key={workspace._id}
-            onClick={() => navigate(`/workspace/${workspace._id}`)}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-5px)";
-              e.currentTarget.style.border = "1px solid #60a5fa";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.border = "1px solid #334155";
-            }}
-            style={{
-              background: "#1e293b",
-              padding: "20px",
-              borderRadius: "12px",
-              cursor: "pointer",
-              border: "1px solid #334155",
-              transition: "all 0.3s ease",
-              boxShadow: "0 4px 10px rgba(0,0,0,0.3)",
-            }}
+        <div className="flex justify-end gap-3">
+          <Button
+            className="bg-slate-700 hover:bg-slate-600"
+            onClick={() => setOpenModal(false)}
           >
-            <h2>📁 {workspace.name}</h2>
-            <p>Members: {workspace.members?.length}</p>
-          </div>
-        ))}
-      </div>
+            Cancel
+          </Button>
+
+          <Button
+            onClick={handleCreateWorkspace}
+            disabled={creating}
+          >
+            {creating ? "Creating..." : "Create"}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }
-
-export default Dashboard;

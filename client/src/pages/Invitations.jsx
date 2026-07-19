@@ -19,7 +19,16 @@ function Invitations() {
   };
 
   useEffect(() => {
-    loadInvitations();
+    const fetchInvitations = async () => {
+      try {
+        const data = await getInvitations();
+        setInvitations(data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchInvitations();
   }, []);
 
   const handleAccept = async (id) => {

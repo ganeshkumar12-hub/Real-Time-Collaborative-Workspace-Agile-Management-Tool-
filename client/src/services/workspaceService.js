@@ -29,3 +29,17 @@ export const createWorkspace = async (name) => {
 
   return response.data;
 };
+export const deleteWorkspace = async (id) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.delete(
+    `${API_URL}/${id}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return response.data;
+};
