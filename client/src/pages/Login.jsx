@@ -54,12 +54,22 @@ function Login() {
 
   return (
     <div className="login-page">
+
+      {/* App Title */}
+      <div className="app-title">
+        <h1>Real Time Collaborative Workspace</h1>
+        <p>Collaborate • Organize • Deliver</p>
+      </div>
+
+      {/* Login Card */}
       <div className="login-card">
 
-        <h1>Welcome Back 👋</h1>
+        <h1>
+          Welcome Back <span>👋</span>
+        </h1>
 
         <p className="subtitle">
-          Sign in to continue to your workspace
+          Login to continue managing your workspaces.
         </p>
 
         <form onSubmit={submitHandler}>
@@ -76,7 +86,6 @@ function Login() {
           </div>
 
           <div className="input-group">
-
             <Lock size={18} className="icon" />
 
             <input
@@ -89,9 +98,7 @@ function Login() {
             <button
               type="button"
               className="eye-btn"
-              onClick={() =>
-                setShowPassword(!showPassword)
-              }
+              onClick={() => setShowPassword(!showPassword)}
             >
               {showPassword ? (
                 <EyeOff size={18} />
@@ -99,7 +106,6 @@ function Login() {
                 <Eye size={18} />
               )}
             </button>
-
           </div>
 
           <button
@@ -113,15 +119,14 @@ function Login() {
         </form>
 
         <p className="register-text">
-          Don't have an account?
-
+          Don't have an account?{" "}
           <Link to="/register">
             Register
           </Link>
-
         </p>
 
       </div>
+
     </div>
   );
 }

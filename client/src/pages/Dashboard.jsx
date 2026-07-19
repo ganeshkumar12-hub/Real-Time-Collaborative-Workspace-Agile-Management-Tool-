@@ -1,22 +1,19 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
+import ActivityTimeline from "../components/dashboard/ActivityTimeline";
 import DashboardHeader from "../components/dashboard/DashboardHeader";
 import DashboardStats from "../components/dashboard/DashboardStats";
-import WorkspaceGrid from "../components/dashboard/WorkspaceGrid";
-import ActivityTimeline from "../components/dashboard/ActivityTimeline";
-import UpcomingTasks from "../components/dashboard/UpcomingTasks";
 import TeamMembers from "../components/dashboard/TeamMembers";
+import UpcomingTasks from "../components/dashboard/UpcomingTasks";
+import WorkspaceGrid from "../components/dashboard/WorkspaceGrid";
 
-import {
-  getWorkspaces,
-  createWorkspace,
-} from "../services/workspaceService";
+import { createWorkspace, getWorkspaces } from "../services/workspaceService";
 
 import useAuthStore from "../store/authStore";
 
-import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
+import Modal from "../components/ui/Modal";
 
 export default function Dashboard() {
   const { user } = useAuthStore();
@@ -73,15 +70,8 @@ export default function Dashboard() {
       setCreating(false);
     }
   }
-useEffect(() => {
-  toast.success("Dashboard Loaded!");
-}, []);
   useEffect(() => {
-    loadWorkspaces();
-
-    // Test Toast (Remove later)
-    
-toast.success("Dashboard Loaded!");
+    void loadWorkspaces();
   }, []);
 
   return (
@@ -111,9 +101,7 @@ toast.success("Dashboard Loaded!");
       </div>
 
       <Modal open={openModal}>
-        <h2 className="text-2xl font-bold mb-6">
-          Create Workspace
-        </h2>
+        <h2 className="text-2xl font-bold mb-6">Create Workspace</h2>
 
         <input
           type="text"
@@ -131,10 +119,7 @@ toast.success("Dashboard Loaded!");
             Cancel
           </Button>
 
-          <Button
-            onClick={handleCreateWorkspace}
-            disabled={creating}
-          >
+          <Button onClick={handleCreateWorkspace} disabled={creating}>
             {creating ? "Creating..." : "Create"}
           </Button>
         </div>
